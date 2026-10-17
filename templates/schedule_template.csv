@@ -1,0 +1,3 @@
+ID,Title,Start Date,Start Time,End Date,End Time,All Day,Timezone,Description,Location,Attendees,Calendar ID,Recurrence,Recurrence Until,Reminders,SendInvites,Result
+EVT-001,会議A,2026-10-20,14:30,2026-10-20,15:30,FALSE,Asia/Tokyo,"議題：進捗確認",会議室A,"a@example.com,b@example.com",primary,WEEKLY,2026-12-31,"30,1440",TRUE,
+EVT-002,終日イベントB,2026-11-01,,2026-11-01,,TRUE,Asia/Tokyo,"祝日または終日予定",, ,primary,NONE,, ,FALSE,
