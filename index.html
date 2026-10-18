@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f7fb">
+  <title>てこの原理シミュレーション</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #17233b;
+      --muted: #66738a;
+      --line: #e2e8f1;
+      --blue: #3478f6;
+      --orange: #f08a42;
+      --surface: #fff;
+      font-family: "Noto Sans JP", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 36px 18px 52px;
+      color: var(--ink);
+      background:
+        radial-gradient(ellipse at 50% -20%, #e6efff 0, transparent 52%),
+        #f5f7fb;
+    }
+
+    .app { width: min(100%, 960px); margin: 0 auto; }
+    header { margin: 0 0 22px; }
+    .eyebrow {
+      margin: 0 0 7px;
+      color: var(--blue);
+      font-size: .78rem;
+      font-weight: 800;
+      letter-spacing: .12em;
+    }
+    h1 { margin: 0; font-size: clamp(1.55rem, 4vw, 2.15rem); letter-spacing: .02em; }
+    .intro { margin: 9px 0 0; color: var(--muted); line-height: 1.7; }
+
+    .panel {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: var(--surface);
+      box-shadow: 0 14px 38px #263d6410;
+    }
+
+    .scene { padding: 12px 18px 2px; background: linear-gradient(180deg, #fbfdff, #f5f9ff); }
+    svg { display: block; width: 100%; height: auto; max-height: 360px; }
+    .ground { stroke: #d7dfeb; stroke-width: 2; }
+    .tick { stroke: #bdc8d8; stroke-width: 1.5; }
+    .measure { fill: #78869c; font-size: 13px; }
+    .beam { fill: #e5a94e; stroke: #bf8030; stroke-width: 2; }
+    .weight-left { fill: #548af2; stroke: #2865d4; stroke-width: 2; }
+    .weight-right { fill: #f39a5b; stroke: #d87532; stroke-width: 2; }
+    .weight-label { fill: white; font-size: 15px; font-weight: 800; text-anchor: middle; }
+    .pivot { fill: #53647d; }
+    .pivot-base { fill: #8291a7; }
+    .pivot-label { fill: #53647d; font-size: 13px; font-weight: 700; text-anchor: middle; }
+    .arc { fill: none; stroke: #a9b9d0; stroke-width: 1.5; stroke-dasharray: 5 6; }
+
+    .readout {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 14px;
+      padding: 15px 22px;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+    .torque { display: flex; align-items: baseline; justify-content: center; gap: 8px; }
+    .torque.left { color: var(--blue); }
+    .torque.right { color: var(--orange); }
+    .torque strong { font-size: clamp(1.35rem, 4vw, 1.8rem); font-variant-numeric: tabular-nums; }
+    .torque span { color: var(--muted); font-size: .88rem; }
+    .status {
+      min-width: 112px;
+      padding: 8px 13px;
+      border-radius: 999px;
+      background: #edf2f8;
+      color: #55647a;
+      font-size: .84rem;
+      font-weight: 800;
+      text-align: center;
+    }
+    .status.balanced { background: #e7f7ee; color: #21804d; }
+    .status.tipping { background: #fff2e8; color: #b55a20; }
+
+    .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 0 28px; padding: 4px 24px 20px; }
+    .side-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 14px 0 2px;
+      font-size: 1rem;
+    }
+    .dot { width: 9px; height: 9px; border-radius: 50%; }
+    .dot.left { background: var(--blue); }
+    .dot.right { background: var(--orange); }
+    .control { padding-top: 17px; }
+    .control-heading { display: flex; justify-content: space-between; gap: 12px; font-size: .91rem; }
+    .value { color: var(--ink); font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    input[type="range"] {
+      display: block;
+      width: 100%;
+      height: 22px;
+      margin: 9px 0 0;
+      accent-color: var(--blue);
+      cursor: pointer;
+    }
+    .right-side input[type="range"] { accent-color: var(--orange); }
+    .range-labels { display: flex; justify-content: space-between; color: #8793a5; font-size: .74rem; }
+
+    .lesson {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-top: 16px;
+      padding: 15px 18px;
+      border: 1px solid #e1e9f5;
+      border-radius: 14px;
+      background: #ffffffa8;
+      color: var(--muted);
+      font-size: .88rem;
+      line-height: 1.7;
+    }
+    .lesson b { flex: 0 0 auto; color: var(--ink); }
+    .formula { color: var(--ink); font-weight: 700; }
+
+    @media (max-width: 600px) {
+      body { padding: 25px 12px 36px; }
+      .scene { padding: 8px 6px 0; }
+      .readout { gap: 5px; padding: 13px 8px; }
+      .torque { flex-direction: column; align-items: center; gap: 0; }
+      .torque span { font-size: .75rem; }
+      .status { min-width: 88px; padding: 7px 9px; font-size: .76rem; }
+      .controls { gap: 0 15px; padding: 4px 15px 18px; }
+      .side-title { font-size: .9rem; }
+      .control-heading { font-size: .82rem; }
+      .lesson { font-size: .82rem; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header>
+      <p class="eyebrow">SCIENCE / PHYSICS</p>
+      <h1>てこの原理シミュレーション</h1>
+      <p class="intro">おもりの重さや支点からの距離を変えて、てこの動きを観察しよう。</p>
+    </header>
+
+    <section class="panel" aria-label="てこのシミュレーション">
+      <div class="scene">
+        <svg viewBox="0 0 800 330" role="img" aria-labelledby="scene-title scene-description">
+          <title id="scene-title">てこと左右のおもり</title>
+          <desc id="scene-description">支点を中心に、左右のおもりのモーメントに応じて傾くてこです。</desc>
+          <path class="arc" d="M130 252 Q400 74 670 252"/>
+          <line class="ground" x1="80" y1="260" x2="720" y2="260"/>
+          <g aria-hidden="true">
+            <line class="tick" x1="160" y1="253" x2="160" y2="267"/>
+            <line class="tick" x1="240" y1="253" x2="240" y2="267"/>
+            <line class="tick" x1="320" y1="253" x2="320" y2="267"/>
+            <line class="tick" x1="400" y1="251" x2="400" y2="269"/>
+            <line class="tick" x1="480" y1="253" x2="480" y2="267"/>
+            <line class="tick" x1="560" y1="253" x2="560" y2="267"/>
+            <line class="tick" x1="640" y1="253" x2="640" y2="267"/>
+            <text class="measure" x="160" y="289" text-anchor="middle">30</text>
+            <text class="measure" x="240" y="289" text-anchor="middle">20</text>
+            <text class="measure" x="320" y="289" text-anchor="middle">10</text>
+            <text class="measure" x="400" y="289" text-anchor="middle">0</text>
+            <text class="measure" x="480" y="289" text-anchor="middle">10</text>
+            <text class="measure" x="560" y="289" text-anchor="middle">20</text>
+            <text class="measure" x="640" y="289" text-anchor="middle">30 cm</text>
+          </g>
+          <g id="lever" style="transform-origin: 400px 240px; transition: transform 500ms cubic-bezier(.2,.8,.2,1)">
+            <rect class="beam" x="105" y="231" width="590" height="18" rx="9"/>
+            <g id="left-weight" transform="translate(0 0)">
+              <rect class="weight-left" x="-25" y="174" width="50" height="57" rx="8"/>
+              <text id="left-weight-label" class="weight-label" x="0" y="207">5 kg</text>
+            </g>
+            <g id="right-weight" transform="translate(0 0)">
+              <rect class="weight-right" x="-25" y="174" width="50" height="57" rx="8"/>
+              <text id="right-weight-label" class="weight-label" x="0" y="207">5 kg</text>
+            </g>
+          </g>
+          <path class="pivot" d="M400 239 L366 257 Q364 259 369 260 L431 260 Q436 259 434 257 Z"/>
+          <rect class="pivot-base" x="358" y="260" width="84" height="9" rx="4"/>
+          <text class="pivot-label" x="400" y="309">支点</text>
+        </svg>
+      </div>
+
+      <div class="readout" aria-live="polite">
+        <div class="torque left">
+          <strong id="left-torque">150</strong><span>左の力のモーメント (kg·cm)</span>
+        </div>
+        <div id="status" class="status balanced">つり合い</div>
+        <div class="torque right">
+          <strong id="right-torque">150</strong><span>右の力のモーメント (kg·cm)</span>
+        </div>
+      </div>
+
+      <div class="controls">
+        <section class="left-side" aria-labelledby="left-title">
+          <h2 class="side-title" id="left-title"><span class="dot left"></span>左のおもり</h2>
+          <label class="control" for="left-mass">
+            <span class="control-heading"><span>重さ</span><span class="value" id="left-mass-value">5 kg</span></span>
+            <input id="left-mass" type="range" min="1" max="10" step="1" value="5">
+            <span class="range-labels"><span>1 kg</span><span>10 kg</span></span>
+          </label>
+          <label class="control" for="left-distance">
+            <span class="control-heading"><span>支点からの距離</span><span class="value" id="left-distance-value">30 cm</span></span>
+            <input id="left-distance" type="range" min="5" max="35" step="5" value="30">
+            <span class="range-labels"><span>5 cm</span><span>35 cm</span></span>
+          </label>
+        </section>
+        <section class="right-side" aria-labelledby="right-title">
+          <h2 class="side-title" id="right-title"><span class="dot right"></span>右のおもり</h2>
+          <label class="control" for="right-mass">
+            <span class="control-heading"><span>重さ</span><span class="value" id="right-mass-value">5 kg</span></span>
+            <input id="right-mass" type="range" min="1" max="10" step="1" value="5">
+            <span class="range-labels"><span>1 kg</span><span>10 kg</span></span>
+          </label>
+          <label class="control" for="right-distance">
+            <span class="control-heading"><span>支点からの距離</span><span class="value" id="right-distance-value">30 cm</span></span>
+            <input id="right-distance" type="range" min="5" max="35" step="5" value="30">
+            <span class="range-labels"><span>5 cm</span><span>35 cm</span></span>
+          </label>
+        </section>
+      </div>
+    </section>
+
+    <aside class="lesson">
+      <b>てこのきまり</b>
+      <span><span class="formula">重さ × 支点からの距離</span> が左右で等しいと、てこはつり合います。値を変えて、どんなときにつり合うか試してみよう。</span>
+    </aside>
+  </main>
+  <script>
+    const controls = ["left-mass", "left-distance", "right-mass", "right-distance"];
+    const byId = (id) => document.getElementById(id);
+
+    function update() {
+      const leftMass = Number(byId("left-mass").value);
+      const leftDistance = Number(byId("left-distance").value);
+      const rightMass = Number(byId("right-mass").value);
+      const rightDistance = Number(byId("right-distance").value);
+      const leftTorque = leftMass * leftDistance;
+      const rightTorque = rightMass * rightDistance;
+      const difference = rightTorque - leftTorque;
+
+      byId("left-mass-value").textContent = `${leftMass} kg`;
+      byId("left-distance-value").textContent = `${leftDistance} cm`;
+      byId("right-mass-value").textContent = `${rightMass} kg`;
+      byId("right-distance-value").textContent = `${rightDistance} cm`;
+      byId("left-torque").textContent = leftTorque;
+      byId("right-torque").textContent = rightTorque;
+      byId("left-weight-label").textContent = `${leftMass} kg`;
+      byId("right-weight-label").textContent = `${rightMass} kg`;
+
+      const centerX = 400;
+      const pixelsPerCm = 8;
+      byId("left-weight").setAttribute("transform", `translate(${centerX - leftDistance * pixelsPerCm} 0)`);
+      byId("right-weight").setAttribute("transform", `translate(${centerX + rightDistance * pixelsPerCm} 0)`);
+      byId("lever").style.transform = `rotate(${Math.max(-14, Math.min(14, difference * 0.055))}deg)`;
+
+      const status = byId("status");
+      if (Math.abs(difference) <= 5) {
+        status.textContent = "つり合い";
+        status.className = "status balanced";
+      } else {
+        status.textContent = difference > 0 ? "右に傾く" : "左に傾く";
+        status.className = "status tipping";
+      }
+    }
+
+    controls.forEach((id) => byId(id).addEventListener("input", update));
+    update();
+  </script>
+</body>
+</html>
